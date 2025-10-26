@@ -1,0 +1,192 @@
+version: '3.8'
+
+services:
+  # Backend Services
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        SERVICE_NAME: api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - USER_SERVICE_URL=http://user-service:3001
+      - PRODUCT_SERVICE_URL=http://product-service:3002
+    depends_on:
+      - user-service
+      - product-service
+    networks:
+      - backend
+      - frontend
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        SERVICE_NAME: user-service
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DB_HOST=postgres-users
+      - DB_PORT=5432
+      - DB_NAME=users_db
+      - DB_USER=user
+      - DB_PASSWORD=password
+    depends_on:
+      postgres-users:
+        condition: service_healthy
+    networks:
+      - backend
+
+  product-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        SERVICE_NAME: product-service
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - DB_HOST=postgres-products
+      - DB_PORT=5432
+      - DB_NAME=products_db
+      - DB_USER=user
+      - DB_PASSWORD=password
+    depends_on:
+      postgres-products:
+        condition: service_healthy
+    networks:
+      - backend
+
+  # Frontend Applications
+  shell:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        APP_NAME: shell
+        PORT: 4200
+    ports:
+      - "4200:4200"
+    environment:
+      - NODE_ENV=development
+      - API_URL=http://api-gateway:3000
+    depends_on:
+      - api-gateway
+    networks:
+      - frontend
+    volumes:
+      - ./apps/frontend/shell:/app/apps/frontend/shell
+      - ./apps/frontend/feature-users:/app/apps/frontend/feature-users
+      - ./libs:/app/libs
+
+  feature-users:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        APP_NAME: feature-users
+        PORT: 4201
+    ports:
+      - "4201:4201"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - frontend
+    volumes:
+      - ./apps/frontend/feature-users:/app/apps/frontend/feature-users
+      - ./libs:/app/libs
+
+  feature-products:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        APP_NAME: feature-products
+        PORT: 4202
+    ports:
+      - "4202:4202"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - frontend
+    volumes:
+      - ./apps/frontend/feature-products:/app/apps/frontend/feature-products
+      - ./libs:/app/libs
+
+  # PostgreSQL Databases
+  postgres-users:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: users_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-users-data:/var/lib/postgresql
+      - ./docker/postgres/user-service:/docker-entrypoint-initdb.d
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d users_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-products:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: products_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-products-data:/var/lib/postgresql
+      - ./docker/postgres/product-service:/docker-entrypoint-initdb.d
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d products_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-orders:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: orders_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-orders-data:/var/lib/postgresql
+      - ./docker/postgres/order-service:/docker-entrypoint-initdb.d
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d orders_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-users-data:
+  postgres-products-data:
+  postgres-orders-data:
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge

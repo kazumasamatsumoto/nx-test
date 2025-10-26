@@ -1,0 +1,39 @@
+# Multi-stage Dockerfile for all backend services
+# Build stage
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY nx.json ./
+COPY tsconfig.base.json ./
+
+# Install all dependencies
+RUN npm install --legacy-peer-deps
+
+# Copy all source code
+COPY apps ./apps
+COPY libs ./libs
+
+# Build argument to specify which service to build
+ARG SERVICE_NAME
+
+# Build the specific service
+RUN npx nx build ${SERVICE_NAME} --configuration=production
+
+# Production stage
+FROM node:20-alpine
+
+WORKDIR /app
+
+ARG SERVICE_NAME
+
+# Copy built application from builder
+COPY --from=builder /app/dist/apps/backend/${SERVICE_NAME} ./
+
+# Install production dependencies
+RUN npm install --production --legacy-peer-deps
+
+# Start the application
+CMD ["node", "main.js"]

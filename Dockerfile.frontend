@@ -1,0 +1,30 @@
+# Development Dockerfile for frontend applications
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Build arguments
+ARG APP_NAME
+ARG PORT=4200
+
+# Copy package files
+COPY package*.json ./
+COPY nx.json ./
+COPY tsconfig.base.json ./
+
+# Install all dependencies
+RUN npm install --legacy-peer-deps
+
+# Copy all source code
+COPY apps ./apps
+COPY libs ./libs
+
+# Set environment variables
+ENV APP_NAME=${APP_NAME}
+ENV PORT=${PORT}
+
+# Expose port
+EXPOSE ${PORT}
+
+# Serve the application in development mode
+CMD sh -c "npx nx serve $APP_NAME --host 0.0.0.0 --port $PORT"
