@@ -1,9 +1,18 @@
 import { Route } from '@angular/router';
-import { NxWelcome } from '../nx-welcome';
+import { UserListComponent } from '../pages/user-list/user-list.component';
+import { UserFormComponent } from '../pages/user-form/user-form.component';
 
 export const remoteRoutes: Route[] = [
   {
     path: '',
-    component: NxWelcome,
+    component: UserListComponent,
+  },
+  {
+    path: 'create',
+    component: UserFormComponent,
+  },
+  {
+    path: ':id/edit',
+    component: UserFormComponent,
   },
 ];

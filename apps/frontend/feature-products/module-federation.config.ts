@@ -1,9 +1,9 @@
 import { ModuleFederationConfig } from '@nx/module-federation';
 
 const config: ModuleFederationConfig = {
-  name: 'feature-users',
+  name: 'feature-products',
   exposes: {
-    './Routes': 'apps/frontend/feature-users/src/app/remote-entry/entry.routes.ts',
+    './Routes': 'apps/frontend/feature-products/src/app/remote-entry/entry.routes.ts',
   },
 };
 
